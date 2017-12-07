@@ -1,0 +1,360 @@
+# 函数
+
+函数包含一组语句，是Javascript的基础模块单元，用于代码复用、信息隐藏和组合调用。
+
+一般来说，所谓编程就是将一组需求分解成一组函数与数据结构的技能。
+
+## 函数对象
+
+函数就是对象，对象是"名/值"对的集合并且拥有一个连到原型对象的隐藏连接。对象字面量产生的对象连接到 Object.prototype ，函数对象连接到 Function.prototype （该原型对象本身又连接到 Object.prototype）。
+
+每个函数在创建时会附加两个属性：
+
+- 函数上下文
+- 实现函数行为的代码（给创建的函数对象设置一个"调用"属性）。
+
+每个函数对象在创建时也会带一个 prototype 属性，它的值是一个拥有 constructor 属性且值为该函数的对象。
+
+
+## 函数字面量
+
+函数对象通过字面量来创建:
+
+```javascript
+var add = function(a,b){
+    return a + b;
+}
+```
+
+函数表达式包含四部分：
+
+
+
+1. 保留字 function
+2. 函数名，可以被省略（匿名函数）
+3. 参数，逗号分隔
+4. 函数主体(花括号中的语句)
+
+
+函数表达式允许出现在任何允许表达式出现的地方，函数也可以被定义在其他函数中。一个内部函数可以访问自己的参数和变量，同时它也能方便地访问它被嵌套在其中的那个函数的参数和变量。通过函数表达式创建的函数对象包含一个连到外部上下文的连接，被称为闭包。
+
+## 调用
+调用一个函数会暂停当前函数的执行，并传递控制权和参数给新函数，除了声明时定义的参数，还接收两个附加参数：**this**和**arguments**。this的值取决于调用的模式。
+
+在JavaScript中一共有4中调用模式：方法调用模式、函数调用模式、构造器调用模式，apply调用模式。
+
+**1.方法调用模式**
+
+当一个函数被保存为对象的一个属性时，我们称之为方法。当一个方法被调用时，this绑定到该对象。
+```javascript
+var myObject = {
+	value:0,
+	increment:function(inc) {
+		this.value += typeof inc === 'number' ? inc : 1;
+	}
+}
+myObject.increment();
+console.log(myObject.value);	//1
+myObject.increment(2);
+console.log(myObject.value);	//3
+
+```
+
+方法可以使用this访问自己所属的对象，所以它能从对象中取值或对对象进行修改。
+
+this到对象的绑定发生在方法被调用的时候。这个"超级"延迟绑定使得函数可以对this高度复用，通过this可取得它们所属对象的上下文的方法称为公共方法(public method).
+
+**2.函数调用模式**
+函数并非一个对象的属性时，被当做一个函数来调用，this被绑定到全局对象。
+
+这里有一个语言设计上的吧错误，当内部函数被调用时(如下例中的helper)，this应当仍然绑定到外部变量的this，而非全局对象。这个错误导致的后果就是：方法不能利用内部函数帮助它工作，因为内部函数的this被绑定了错误的值，不能共享方法对对象的访问权。
+
+解决方案：定义一个变量，并将其赋值为this，参见下例。
+
+```javascript
+//结合上述代码的myObject
+
+myObject.double = function() {
+	var that = this;
+
+	var	helper = function() {
+		that.value = function() {
+			that.value = add(that.value,that.value);
+		}
+	};
+	helper();	//以函数的方式调用helper
+}
+
+myObject.double();	//以方法的方式调用double
+console.log(myObject.value);	//6
+```
+
+**3.构造器调用模式**
+如果在一个函数前面带上new来调用，那么将创建一个隐藏连接到该函数的prototype成员的新对象，同时this将绑定到那个新对象上。
+
+补充说明：
+
+new的过程：
+
+1. 创建一个"空"对象obj。
+2. 让obj的__proto__成员指向构造函数的prototype成员对象
+3. 使用apply调用构造函数，将this绑定到obj上
+4. 返回obj
+
+```javascript
+function NEW_OBJECT(Foo){
+	var obj={};
+	obj.__proto__ = Foo.prototype;
+	obj.__proto__.constructor = Foo;
+	Foo.apply(obj,arguments)
+	return obj;
+}
+```
+若一个函数的创建目的是希望结合new前缀调用，则称该函数为构造器函数。一般将其保存在以大写格式命名的变量中，避免调用时没有加new前缀。
+
+```javascript
+var Que = function (string) {
+	this.status = string;
+}
+Que.prototype.get_status = function() {
+	return this.status;
+}
+var myQue = new Que("confused");
+console.log(myQue.get_status());	//"confused"
+```
+
+
+**4.Apply/call调用模式**
+
+JavaScript是一门函数式的面向对象编程语言，所以函数可以拥有方法。
+
+apply和call方法允许我们选中this值,改变函数的上下文（作用域）。
+
+apply接收两个参数，第一个是将被绑定给this的值，第二个是一个参数数组，call与apply相同，不过第二个参数不是数组。
+
+```javascript
+var statusObject = {
+	status:'A-OK'
+};
+
+var status = Que.prototype.get_status.apply(statusObject);    //'A-OK'
+
+
+var dog = {
+    color:'yellow'
+}
+var color = 'red' ;
+function t(){
+    alert(this.color) ;
+}
+t(); // red
+t.call(dog); //yellow
+```
+
+
+## 参数
+
+当函数被调用时，会得到一个参数，即arguments数组。函数可以通过此参数访问函数调用时传递的参数列表。
+
+设计错误：arguments并不是一个真正的数组，而是一个"类数组"对象,它拥有一个length属性，但没有任何数组的方法。该设计导致的错误将会在本篇结尾谈及。
+
+## 返回
+当一个函数被调用时，从第一个语句开始执行，到遇到关闭函数体的}时结束，然后把传递控制权还给调用该函数的程序。
+
+return语句可用来使函数提前返回，当return执行时，函数立即返回，不再执行余下语句。
+
+一个函数总是会返回一个值，若没有指定则返回undefined。
+
+如果函数前加一个new来调用，且返回值不是一个对象，则返回this(该对象)。
+
+
+## 异常
+
+抛出异常：
+
+```javascript
+function add(a,b) {
+	if(typeof a !== 'number' || typeof b !== 'number') {
+		throw {
+			name: 'TypeError',
+			message: 'add needs numbers'
+		}
+	}
+	return a + b;
+}
+```
+
+throw语句中断函数的执行，抛出一个exception对象，该对象包含可识别异常类型的name属性和一个描述性的message属性。
+
+该exception对象将传递一个try语句的catch从句。
+
+```javascript 
+var try_it = function() {
+	try {
+		add('seven')
+	} catch(e) {
+		console.log(e.name);	//TypeError
+		console.log(e.message);	//add needs numbers
+	}
+}
+try_it();
+```
+
+
+## 扩充类型的功能
+
+JavaScript允许给语言的基本类型扩充功能，即给类型增加方法。
+
+```javascript
+Number.prototype.integer = function() {
+	return Math[this < 0 ? 'ceiling' : 'floor'](this);	
+	//this指向实例
+}
+var num = 10/3
+console.log(num.integer())    ;    // 3
+```
+
+## 递归
+
+尾递归优化：尾递归指的是函数运行最后一步(不是最后一行)，是否调用自身，递归非常耗内存，需要同时保存成千上百个调用记录，很容易发生"栈溢出"错误，如果一个函数是尾递归，其调用过程将只存在一个调用记录，永远不会发生"栈溢出"错误。
+
+JavaScript尾递归优化，在ES6的严格模式下才实现。
+
+```javascript
+//非尾递归
+function factorial(n) {
+  if (n === 1) return 1;
+  return n * factorial(n - 1);
+}
+
+factorial(5) // 120
+//尾递归
+function factorial(n, total) {
+  if (n === 1) return total;
+  return factorial(n - 1, n * total);
+}
+
+factorial(5, 1) // 120
+```
+
+
+## 作用域
+
+作用域控制着变量与参数的可见性和生命周期，它减少了名称冲突，并且提供了自动内存管理。
+
+JavaScript没有块级作用域，却有函数作用域：定义在函数中的参数和变量在函数外部是不可见的，而且在一个函数中的任何位置定义的变量在该函数中的任何地方都可见。
+
+
+## 闭包
+
+作用域的好处是内部函数可以访问定义它们的外部函数的参数和变量(除了this好arguments)。
+
+```javascript
+//定义一个函数，设置一个DOM节点为黄色，然后把它渐变成白色
+var fade = function(node) {
+	var level = 1;
+	var step = function() {
+		var hex = level.toString(16);
+		node.style.backgroundColor = '#FFFF' + hex + hex;
+		if(level < 15) {
+			level += 1;
+			setTimeout(step,100);
+		}
+	};
+	setTimeout(step,100);
+};
+fade(document.body);
+
+```
+
+## 回调
+
+## 模块
+可以使用函数和闭包来构造模块。模块是一个提供接口却隐藏状态与实现的函数或对象。通过使用函数产生模块，可以几乎完成摒弃全局变量的使用。
+
+模块的一般形式：一个定义了私有变量和函数的函数，利用闭包创建可以访问私有变量和函数的特权函数，最后返回这个特权函数，或者把它们保存到一个可以访问到的地方。
+
+```javascript
+var serial_maker = function() {
+	var prefix = '';
+	var seq = 0;
+	return {
+		set_prefix:function(p) {
+			prefix = String(p);
+		},
+		set_seq:function(s) {
+			seq = String(s);
+		},
+		gensym:function() {
+			var result = prefix + seq;
+			seq += 1;
+			return result;
+		}
+	};
+};
+var seqer = serial_maker();
+seqer.set_prefix('Q');
+seqer.set_seq(1000);
+var unique = seqer.gensym();	//unique为"Q1000"
+```
+
+
+## 级联
+级联:在单独的一条语句中一次调用同一个对象的很多方法。
+
+让某些不返回任何值的方法返回this,就可以启动级联。
+
+```javascript
+	//比如：
+	getElement('myBoxDiv')
+	.move(350,150)
+	.width(100)
+	.height(100);
+```
+
+
+## 柯里化
+柯里化允许我们把函数与传递给它的参数相结合，产生一个新函数。
+
+```javascript
+Function.method('curry',function() {
+	var args = arguments,
+		that = this;
+	return function() {
+		return that.apply(null,args.concat(arguments));
+	};
+});
+var add1 = add.curry(1);	//add1为把1传递给add的curry方法后创建的一个函数。
+console.log(add1()6);	//7
+```
+
+在本篇【参数】部分说到，arguments不是一个真正数组，它没有concat方法，要避开该问题必须在两个arguments数组上都应用数组的slice方法。
+因此有：
+
+```javascript
+Function.method('curry',function() {
+	var slice = Array.prototype.slice,
+		args = arguments,
+		that = this;
+	return function () {
+		return function() {
+			return that.apply(null,args.concat(slice.apply(arguments)));
+		};
+	};
+});
+```
+
+## 记忆
+
+函数可以将先前操作结果记录在某个对象里，从而避免无谓的重复运算。这种优化被称为记忆（memoization）而js的对象和数组要实现这种优化是非常方便的。
+
+比如说Fibonacci数列，假如单纯的用递归去调用（10的话）则会差不多调用了453次，但是用一个memo数组保存储存结果的话，，则29次左右则可完成。
+
+```javascript
+var fibonacci = memoization([0,1],function(recur,n){
+	return recur (n - 1) ＋ recur (n - 2);
+});
+var factorial = memoizer([1,1],function(recur,n){
+	return n * recur(n - 1)
+})
+```
